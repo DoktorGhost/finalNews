@@ -34,7 +34,6 @@ func InitDB() *sql.DB {
 }
 
 func ExecuteSchemaSQL(db *sql.DB) {
-
 	// Чтение содержимого schema.sql
 	schemaSQL, err := ioutil.ReadFile("pcg/database/schema.sql")
 	if err != nil {
@@ -119,4 +118,35 @@ func GetLatestPosts(n int) ([]typeStruct.Post, error) {
 func DeleteByTitle(title string) error {
 	_, err := DB.Exec("DELETE FROM news WHERE title = $1", title)
 	return err
+}
+
+// SearchPostsByKeyword выполняет поиск новостей по ключевому слову в заголовке
+func SearchPostsByKeyword(keyword string) ([]typeStruct.Post, error) {
+	query := `
+        SELECT id, title, description, pub_date, source
+        FROM news
+        WHERE title ILIKE '%' || $1 || '%'
+    `
+	rows, err := DB.Query(query, keyword)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []typeStruct.Post
+
+	for rows.Next() {
+		var post typeStruct.Post
+		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.PubTime, &post.Link)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }

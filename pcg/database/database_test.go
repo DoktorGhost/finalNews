@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"testing"
 
 	"GoNews/pcg/typeStruct"
@@ -66,4 +67,67 @@ func TestDeleteByTitle(t *testing.T) {
 	// Пытаемся прочитать пост с удаленным названием
 	_, err = ReadFromDB("Test Title 3")
 	assert.Error(t, err, "Expected an error when trying to read deleted post")
+}
+
+func TestSearchPostsByKeyword(t *testing.T) {
+	// Инициализация базы данных и выполнение схемы
+	db := InitDB()
+	defer db.Close()
+
+	// Вставка тестовых данных
+	post1 := typeStruct.Post{
+		Title:   "aa24 f=f2 +++ 56ty",
+		Content: "Test Description 1",
+		PubTime: 1234567890,
+		Link:    "http://example.com/test1",
+	}
+
+	// Сохранение тестовых данных в базе данных
+	if err := SaveToDB(post1); err != nil {
+		t.Fatalf("Failed to save post to DB: %v", err)
+	}
+
+	// Вызов функции для поиска
+	keyword := "F=F2"
+	posts, err := SearchPostsByKeyword(keyword)
+	if err != nil {
+		t.Fatalf("SearchPostsByKeyword failed: %v", err)
+	}
+
+	// Проверка результатов
+	if len(posts) != 1 {
+		t.Fatalf("Expected 1 post, but got %d", len(posts))
+	} else {
+		fmt.Println(posts)
+	}
+	if posts[0].Title != post1.Title {
+		t.Fatalf("Expected post with title '%s', but got '%s'", post1.Title, posts[0].Title)
+	}
+
+	keyword = " "
+	posts, err = SearchPostsByKeyword(keyword)
+	if err != nil {
+		t.Fatalf("SearchPostsByKeyword failed: %v", err)
+	}
+
+	// Проверка результатов
+	if len(posts) < 1 {
+		t.Fatalf("Expected 1 post, but got %d", len(posts))
+	}
+
+	keyword = ""
+	posts, err = SearchPostsByKeyword(keyword)
+	if err != nil {
+		t.Fatalf("SearchPostsByKeyword failed: %v", err)
+	}
+
+	// Проверка результатов
+	if len(posts) < 1 {
+		t.Fatalf("Expected 1 post, but got %d", len(posts))
+	}
+
+	// Удаление тестовых записей из базы данных
+	if err := DeleteByTitle(post1.Title); err != nil {
+		t.Fatalf("Failed to delete test record: %v", err)
+	}
 }

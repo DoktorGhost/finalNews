@@ -58,6 +58,23 @@ func (api *API) posts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(posts)
 }
 
+func (api *API) searchPostsByTitle(w http.ResponseWriter, r *http.Request) {
+	keyword := r.URL.Query().Get("keyword") // Получаем значение параметра "keyword" из запроса
+	if keyword == "" {
+		http.Error(w, "Missing 'keyword' parameter in the request", http.StatusBadRequest)
+		return
+	}
+
+	posts, err := database.SearchPostsByKeyword(keyword)
+	if err != nil {
+		http.Error(w, "Failed to search posts by keyword", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}
+
 // webAppHandler обрабатывает запросы для веб-приложения.
 func (api *API) webAppHandler(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir("./webapp")).ServeHTTP(w, r)
@@ -67,8 +84,11 @@ func (api *API) webAppHandler(w http.ResponseWriter, r *http.Request) {
 func (api *API) endpoints() {
 	// Маршрут для получения n последних новостей
 	api.r.HandleFunc("/news/{n:[0-9]+}", api.posts).Methods(http.MethodGet, http.MethodOptions)
+	// Маршрут для поиска по названию
+	api.r.HandleFunc("/search", api.searchPostsByTitle).Methods(http.MethodGet)
 	// Маршрут для обслуживания веб-приложения
 	api.r.PathPrefix("/").HandlerFunc(api.webAppHandler).Methods(http.MethodGet)
+
 }
 
 // StartAPI запускает API на указанном порту.
