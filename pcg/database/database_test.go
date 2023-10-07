@@ -70,7 +70,7 @@ func TestDeleteByTitle(t *testing.T) {
 }
 
 func TestSearchPostsByKeyword(t *testing.T) {
-	// Инициализация базы данных и выполнение схемы
+	// Инициализация базы данных
 	db := InitDB()
 	defer db.Close()
 
@@ -130,4 +130,24 @@ func TestSearchPostsByKeyword(t *testing.T) {
 	if err := DeleteByTitle(post1.Title); err != nil {
 		t.Fatalf("Failed to delete test record: %v", err)
 	}
+}
+
+func TestGetPosts(t *testing.T) {
+	// Инициализация базы данных
+	db := InitDB()
+	defer db.Close()
+
+	// Вызов функции для поиска
+	page := 1
+	pageSize := 10
+	posts, err := GetPosts(page, pageSize)
+	if err != nil {
+		t.Fatalf("GetLatestPosts failed: %v", err)
+	}
+
+	// Проверка результатов
+	if len(posts) != 10 {
+		t.Fatalf("Expected 1 post, but got %d", len(posts))
+	}
+
 }

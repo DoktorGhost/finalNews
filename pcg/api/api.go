@@ -58,6 +58,31 @@ func (api *API) posts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(posts)
 }
 
+func (api *API) Allposts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	n, err := strconv.Atoi(vars["n"]) // Количество новостей
+	if err != nil {
+		http.Error(w, "Invalid number of news", http.StatusBadRequest)
+		return
+	}
+
+	page, err := strconv.Atoi(vars["page"]) // Номер страницы
+	if err != nil {
+		http.Error(w, "Invalid page number", http.StatusBadRequest)
+		return
+	}
+
+	// Запрос новостей с учетом смещения
+	posts, err := database.GetPosts(page, n)
+	if err != nil {
+		http.Error(w, "Failed to get news", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}
+
 func (api *API) searchPostsByTitle(w http.ResponseWriter, r *http.Request) {
 	keyword := r.URL.Query().Get("keyword") // Получаем значение параметра "keyword" из запроса
 	if keyword == "" {
@@ -84,6 +109,8 @@ func (api *API) webAppHandler(w http.ResponseWriter, r *http.Request) {
 func (api *API) endpoints() {
 	// Маршрут для получения n последних новостей
 	api.r.HandleFunc("/news/{n:[0-9]+}", api.posts).Methods(http.MethodGet, http.MethodOptions)
+	// Маршрут для получения новостей с пагинацией
+	api.r.HandleFunc("/news/{page:[0-9]+}/{n:[0-9]+}", api.Allposts).Methods(http.MethodGet, http.MethodOptions)
 	// Маршрут для поиска по названию
 	api.r.HandleFunc("/search", api.searchPostsByTitle).Methods(http.MethodGet)
 	// Маршрут для обслуживания веб-приложения

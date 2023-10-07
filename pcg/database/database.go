@@ -150,3 +150,44 @@ func SearchPostsByKeyword(keyword string) ([]typeStruct.Post, error) {
 
 	return posts, nil
 }
+
+func GetTotalNewsCount() (int, error) {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM news").Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func GetPosts(page, pageSize int) ([]typeStruct.Post, error) {
+
+	// Вычисление смещения (offset) на основе номера страницы и размера страницы
+	offset := (page - 1) * pageSize
+
+	// Запрос новостей с учетом смещения и ограничения количества
+	query := `
+		SELECT id, title, description, pub_date, source
+		FROM news
+		ORDER BY pub_date DESC
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := DB.Query(query, pageSize, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []typeStruct.Post
+
+	for rows.Next() {
+		var post typeStruct.Post
+		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.PubTime, &post.Link)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+
+	return posts, nil
+}
