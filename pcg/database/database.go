@@ -48,7 +48,7 @@ func ExecuteSchemaSQL(db *sql.DB) {
 }
 
 // Сохранение новости в базе данных
-func SaveToDB(post typeStruct.Post) error {
+func SaveToDB(post typeStruct.Post) (int, error) {
 	query := `
 		INSERT INTO news (title, description, pub_date, source)
 		VALUES ($1, $2, $3, $4)
@@ -58,10 +58,10 @@ func SaveToDB(post typeStruct.Post) error {
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	fmt.Println("Saved to DB with ID:", id)
-	return nil
+	return id, nil
 }
 
 // Чтение новости из базы данных по названию
@@ -115,8 +115,8 @@ func GetLatestPosts(n int) ([]typeStruct.Post, error) {
 }
 
 // Удаление новости из базы данных по названию
-func DeleteByTitle(title string) error {
-	_, err := DB.Exec("DELETE FROM news WHERE title = $1", title)
+func DeletePost(id int) error {
+	_, err := DB.Exec("DELETE FROM news WHERE id = $1", id)
 	return err
 }
 
@@ -149,15 +149,6 @@ func SearchPostsByKeyword(keyword string) ([]typeStruct.Post, error) {
 	}
 
 	return posts, nil
-}
-
-func GetTotalNewsCount() (int, error) {
-	var count int
-	err := DB.QueryRow("SELECT COUNT(*) FROM news").Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
 }
 
 func GetPosts(page, pageSize int) ([]typeStruct.Post, error) {

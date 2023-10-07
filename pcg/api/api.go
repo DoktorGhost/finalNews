@@ -3,8 +3,10 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"GoNews/pcg/database"
 
@@ -84,18 +86,24 @@ func (api *API) Allposts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) searchPostsByTitle(w http.ResponseWriter, r *http.Request) {
-	keyword := r.URL.Query().Get("keyword") // Получаем значение параметра "keyword" из запроса
+	requestID := r.Header.Get("X-Request-ID")
+	keyword := r.URL.Query().Get("keyword")
+
 	if keyword == "" {
 		http.Error(w, "Missing 'keyword' parameter in the request", http.StatusBadRequest)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusBadRequest)
 		return
 	}
 
 	posts, err := database.SearchPostsByKeyword(keyword)
-	if err != nil {
-		http.Error(w, "Failed to search posts by keyword", http.StatusInternalServerError)
+	if err != nil || len(posts) < 1 {
+		http.Error(w, "Failed to search posts by keyword: "+keyword, http.StatusInternalServerError)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusInternalServerError)
 		return
 	}
 
+	// Если запрос завершился успешно, записываем успешный лог
+	log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
 }

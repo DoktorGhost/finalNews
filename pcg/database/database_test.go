@@ -23,7 +23,7 @@ func TestSaveAndReadFromDB(t *testing.T) {
 	}
 
 	// Сохраняем тестовый пост в базу данных
-	err := SaveToDB(testPost)
+	idTest, err := SaveToDB(testPost)
 	if err != nil {
 		t.Fatalf("Failed to save post to DB: %v", err)
 	}
@@ -41,31 +41,11 @@ func TestSaveAndReadFromDB(t *testing.T) {
 		readPost.Link != testPost.Link {
 		t.Errorf("Saved data doesn't match expected data.")
 	}
-}
 
-func TestDeleteByTitle(t *testing.T) {
-	InitDB()
-
-	defer DB.Close()
-
-	// Создаем тестовый пост
-	testPost := typeStruct.Post{
-		Title:   "Test Title 1",
-		Content: "Test Content",
-		PubTime: 1692645688,
-		Link:    "http://example.com/test",
-	}
-
-	// Сохраняем тестовый пост в базу данных
-	err := SaveToDB(testPost)
-	assert.NoError(t, err, "Failed to save post to DB")
-
-	// Удаляем пост по названию
-	err = DeleteByTitle("Test Title 3")
+	err = DeletePost(idTest)
 	assert.NoError(t, err, "Failed to delete post by title")
 
-	// Пытаемся прочитать пост с удаленным названием
-	_, err = ReadFromDB("Test Title 3")
+	_, err = ReadFromDB("Test Title 2")
 	assert.Error(t, err, "Expected an error when trying to read deleted post")
 }
 
@@ -83,7 +63,7 @@ func TestSearchPostsByKeyword(t *testing.T) {
 	}
 
 	// Сохранение тестовых данных в базе данных
-	if err := SaveToDB(post1); err != nil {
+	if _, err := SaveToDB(post1); err != nil {
 		t.Fatalf("Failed to save post to DB: %v", err)
 	}
 
@@ -127,7 +107,7 @@ func TestSearchPostsByKeyword(t *testing.T) {
 	}
 
 	// Удаление тестовых записей из базы данных
-	if err := DeleteByTitle(post1.Title); err != nil {
+	if err := DeletePost(post1.ID); err != nil {
 		t.Fatalf("Failed to delete test record: %v", err)
 	}
 }

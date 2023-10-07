@@ -80,7 +80,7 @@ func startParsingRoutine(url string, period int, stopCh <-chan struct{}, db *sql
 
 			// Сохранение постов в базу данных
 			for _, post := range posts {
-				err := database.SaveToDB(post)
+				_, err := database.SaveToDB(post)
 				if err != nil {
 					log.Println("Failed to save post to DB:", err)
 				}
