@@ -43,34 +43,41 @@ func (api *API) GetRouter() *mux.Router {
 
 // posts обрабатывает запрос на получение последних новостей.
 func (api *API) posts(w http.ResponseWriter, r *http.Request) {
+	requestID := r.Header.Get("X-Request-ID")
 	vars := mux.Vars(r)
 	n, err := strconv.Atoi(vars["n"])
 	if err != nil {
 		http.Error(w, "Неверное количество новостей", http.StatusBadRequest)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusBadRequest)
 		return
 	}
 
 	posts, err := database.GetLatestPosts(n)
 	if err != nil {
 		http.Error(w, "Не удалось получить новости", http.StatusInternalServerError)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
 }
 
 func (api *API) Allposts(w http.ResponseWriter, r *http.Request) {
+	requestID := r.Header.Get("X-Request-ID")
 	vars := mux.Vars(r)
 	n, err := strconv.Atoi(vars["n"]) // Количество новостей
 	if err != nil {
 		http.Error(w, "Invalid number of news", http.StatusBadRequest)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusBadRequest)
 		return
 	}
 
 	page, err := strconv.Atoi(vars["page"]) // Номер страницы
 	if err != nil {
 		http.Error(w, "Invalid page number", http.StatusBadRequest)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusBadRequest)
 		return
 	}
 
@@ -78,9 +85,11 @@ func (api *API) Allposts(w http.ResponseWriter, r *http.Request) {
 	posts, err := database.GetPosts(page, n)
 	if err != nil {
 		http.Error(w, "Failed to get news", http.StatusInternalServerError)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
 }
