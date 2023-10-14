@@ -16,3 +16,15 @@ func NewPost(title, content, link string, pubTime int64) Post {
 		Link:    link,
 	}
 }
+
+type Pagination struct {
+	Page       int
+	PageSize   int
+	TotalPages int
+	TotalItems int
+}
+
+type PaginatedPosts struct {
+	Posts      []Post
+	Pagination Pagination
+}

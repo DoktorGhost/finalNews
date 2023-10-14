@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 
 	_ "github.com/lib/pq"
 )
@@ -13,10 +14,10 @@ import (
 // Константы для настройки подключения к базе данных
 const (
 	DBHost     = "localhost"
-	DBPort     = "5432"
-	DBUser     = "test_user"
-	DBPassword = "qwerty123"
-	DBName     = "testdb"
+	DBPort     = "5434"
+	DBUser     = "admin"
+	DBPassword = "admin"
+	DBName     = "news"
 )
 
 var DB *sql.DB
@@ -65,15 +66,15 @@ func SaveToDB(post typeStruct.Post) (int, error) {
 }
 
 // Чтение новости из базы данных по названию
-func ReadFromDB(title string) (typeStruct.Post, error) {
+func ReadFromDB(id int) (typeStruct.Post, error) {
 	var post typeStruct.Post
 
 	query := `
 		SELECT id, title, description, pub_date, source
 		FROM news
-		WHERE title = $1
+		WHERE id = $1
 	`
-	row := DB.QueryRow(query, title)
+	row := DB.QueryRow(query, id)
 	err := row.Scan(&post.ID, &post.Title, &post.Content, &post.PubTime, &post.Link)
 	if err != nil {
 		return post, err
@@ -151,7 +152,19 @@ func SearchPostsByKeyword(keyword string) ([]typeStruct.Post, error) {
 	return posts, nil
 }
 
-func GetPosts(page, pageSize int) ([]typeStruct.Post, error) {
+func GetPosts(page, pageSize int) (typeStruct.PaginatedPosts, error) {
+
+	var totalResults int
+	countQuery := `SELECT COUNT(id) FROM news`
+	err := DB.QueryRow(countQuery).Scan(&totalResults)
+	if err != nil {
+		return typeStruct.PaginatedPosts{}, err
+	}
+
+	pagination := CalculatePagination(totalResults, pageSize, page)
+
+	page = pagination.Page
+	pageSize = pagination.PageSize
 
 	// Вычисление смещения (offset) на основе номера страницы и размера страницы
 	offset := (page - 1) * pageSize
@@ -165,7 +178,7 @@ func GetPosts(page, pageSize int) ([]typeStruct.Post, error) {
 	`
 	rows, err := DB.Query(query, pageSize, offset)
 	if err != nil {
-		return nil, err
+		return typeStruct.PaginatedPosts{}, err
 	}
 	defer rows.Close()
 
@@ -175,10 +188,34 @@ func GetPosts(page, pageSize int) ([]typeStruct.Post, error) {
 		var post typeStruct.Post
 		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.PubTime, &post.Link)
 		if err != nil {
-			return nil, err
+			return typeStruct.PaginatedPosts{}, err
 		}
 		posts = append(posts, post)
 	}
 
-	return posts, nil
+	return typeStruct.PaginatedPosts{
+		Posts:      posts,
+		Pagination: pagination,
+	}, nil
+}
+
+func CalculatePagination(totalResults, pageSize, page int) typeStruct.Pagination {
+	totalPages := int(math.Ceil(float64(totalResults) / float64(pageSize)))
+
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+
+	return typeStruct.Pagination{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+		TotalItems: totalResults,
+	}
 }

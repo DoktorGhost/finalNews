@@ -35,7 +35,7 @@ func main() {
 	defer db.Close()
 
 	// Создание API сервера
-	apiPort := "8080"
+	apiPort := "8083"
 	go func() {
 		err := api.StartAPI(apiPort, db)
 		if err != nil {

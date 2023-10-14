@@ -43,7 +43,8 @@ func (api *API) GetRouter() *mux.Router {
 
 // posts обрабатывает запрос на получение последних новостей.
 func (api *API) posts(w http.ResponseWriter, r *http.Request) {
-	requestID := r.Header.Get("X-Request-ID")
+
+	requestID := r.URL.Query().Get("uniqueID")
 	vars := mux.Vars(r)
 	n, err := strconv.Atoi(vars["n"])
 	if err != nil {
@@ -65,7 +66,7 @@ func (api *API) posts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) Allposts(w http.ResponseWriter, r *http.Request) {
-	requestID := r.Header.Get("X-Request-ID")
+	requestID := r.URL.Query().Get("uniqueID")
 	vars := mux.Vars(r)
 	n, err := strconv.Atoi(vars["n"]) // Количество новостей
 	if err != nil {
@@ -94,9 +95,10 @@ func (api *API) Allposts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(posts)
 }
 
-func (api *API) searchPostsByTitle(w http.ResponseWriter, r *http.Request) {
-	requestID := r.Header.Get("X-Request-ID")
-	keyword := r.URL.Query().Get("keyword")
+func (api *API) searchPosts(w http.ResponseWriter, r *http.Request) {
+	requestID := r.URL.Query().Get("uniqueID")
+	vars := mux.Vars(r)
+	keyword := vars["str"]
 
 	if keyword == "" {
 		http.Error(w, "Missing 'keyword' parameter in the request", http.StatusBadRequest)
@@ -117,6 +119,29 @@ func (api *API) searchPostsByTitle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(posts)
 }
 
+func (api *API) getPost(w http.ResponseWriter, r *http.Request) {
+	requestID := r.URL.Query().Get("uniqueID")
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["n"])
+	if err != nil {
+		http.Error(w, "Failed id", http.StatusInternalServerError)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusBadRequest)
+		return
+	}
+
+	posts, err := database.ReadFromDB(id)
+	if err != nil {
+		http.Error(w, "Не удалось получить новость", http.StatusInternalServerError)
+		log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Timestamp: %s, Request ID: %s, IP: %s, HTTP Code: %d", time.Now().Format("2006-01-02 15:04:05"), requestID, r.RemoteAddr, http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+
+}
+
 // webAppHandler обрабатывает запросы для веб-приложения.
 func (api *API) webAppHandler(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir("./webapp")).ServeHTTP(w, r)
@@ -127,9 +152,11 @@ func (api *API) endpoints() {
 	// Маршрут для получения n последних новостей
 	api.r.HandleFunc("/news/{n:[0-9]+}", api.posts).Methods(http.MethodGet, http.MethodOptions)
 	// Маршрут для получения новостей с пагинацией
-	api.r.HandleFunc("/news/{page:[0-9]+}/{n:[0-9]+}", api.Allposts).Methods(http.MethodGet, http.MethodOptions)
+	api.r.HandleFunc("/news/{n:[0-9]+}/{page:[0-9]+}", api.Allposts).Methods(http.MethodGet, http.MethodOptions)
 	// Маршрут для поиска по названию
-	api.r.HandleFunc("/search", api.searchPostsByTitle).Methods(http.MethodGet)
+	api.r.HandleFunc("/search/{str:[^/]+}", api.searchPosts).Methods(http.MethodGet)
+	//Маршрут для получения новости по ID
+	api.r.HandleFunc("/id/{n:[0-9]+}", api.getPost).Methods(http.MethodGet, http.MethodOptions)
 	// Маршрут для обслуживания веб-приложения
 	api.r.PathPrefix("/").HandlerFunc(api.webAppHandler).Methods(http.MethodGet)
 

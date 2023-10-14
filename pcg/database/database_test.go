@@ -10,9 +10,9 @@ import (
 )
 
 func TestSaveAndReadFromDB(t *testing.T) {
-	InitDB()
+	db := InitDB()
 
-	defer DB.Close()
+	defer db.Close()
 
 	// Создаем тестовый пост
 	testPost := typeStruct.Post{
@@ -29,7 +29,7 @@ func TestSaveAndReadFromDB(t *testing.T) {
 	}
 
 	// Читаем пост из базы данных по названию
-	readPost, err := ReadFromDB("Test Title 2")
+	readPost, err := ReadFromDB(idTest)
 	if err != nil {
 		t.Fatalf("Failed to read post from DB: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestSaveAndReadFromDB(t *testing.T) {
 	err = DeletePost(idTest)
 	assert.NoError(t, err, "Failed to delete post by title")
 
-	_, err = ReadFromDB("Test Title 2")
+	_, err = ReadFromDB(idTest)
 	assert.Error(t, err, "Expected an error when trying to read deleted post")
 }
 
@@ -110,24 +110,4 @@ func TestSearchPostsByKeyword(t *testing.T) {
 	if err := DeletePost(post1.ID); err != nil {
 		t.Fatalf("Failed to delete test record: %v", err)
 	}
-}
-
-func TestGetPosts(t *testing.T) {
-	// Инициализация базы данных
-	db := InitDB()
-	defer db.Close()
-
-	// Вызов функции для поиска
-	page := 1
-	pageSize := 10
-	posts, err := GetPosts(page, pageSize)
-	if err != nil {
-		t.Fatalf("GetLatestPosts failed: %v", err)
-	}
-
-	// Проверка результатов
-	if len(posts) != 10 {
-		t.Fatalf("Expected 1 post, but got %d", len(posts))
-	}
-
 }
